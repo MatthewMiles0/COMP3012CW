@@ -5,6 +5,7 @@ file: program EOF;
 program: KW_PROGRAM NAME statement* KW_END KW_PROGRAM NAME | expression;
 
 statement: if_statement | if_then_statement | read | write;
+block: statement+;
 expression: literal #LiteralExpression
     | NAME #NameExpression
     | L_BRACKET expression R_BRACKET #BinaryExpression
@@ -16,11 +17,10 @@ expression: literal #LiteralExpression
     | lexp=expression AND rexp=expression #BinaryExpression
     | lexp=expression OR rexp=expression #BinaryExpression;
 
-literal: literal_int | literal_real | literal_logical | literal_char;
-literal_int: L_INT;
-literal_real: L_REAL;
-literal_logical: L_LOGICAL;
-literal_char: L_CHAR;
+literal: L_INT #LiteralInt
+    | L_REAL #LiteralReal
+    | L_LOGICAL #LiteralLogical
+    | L_CHAR #LiteralChar;
 
 //operator: relational_op | logical_op | arithmentic_op | field_access_op | concatenation_op;
 //
@@ -32,8 +32,8 @@ literal_char: L_CHAR;
 //concatenation_op: DOUBLE_SLASH;
 
 // util
-name_list: NAME | NAME COMMA name_list;
-expression_list: expression | expression COMMA expression_list;
+name_list: NAME (COMMA NAME)*;
+expression_list: expression (COMMA expression)*;
 
 // terminal statements
 read: KW_READ name_list;
@@ -41,7 +41,7 @@ write: KW_WRITE expression_list;
 
 // conditions and loops
 if_statement: KW_IF L_BRACKET expression R_BRACKET statement;
-if_then_statement: KW_IF L_BRACKET expression R_BRACKET KW_THEN statement* (KW_ELSE statement*)? KW_END KW_IF;
+if_then_statement: KW_IF L_BRACKET expression R_BRACKET KW_THEN thenBlock=block (KW_ELSE elseBlock=block)? KW_END KW_IF;
 
 /***********************************************************/
 

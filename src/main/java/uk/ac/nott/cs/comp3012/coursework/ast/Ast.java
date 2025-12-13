@@ -8,6 +8,7 @@ import java.util.List;
 public interface Ast {}
 
 record Program(List<Statement> statements) implements Ast {}
+record Block(List<Statement> statements) implements Ast {}
 
 interface Expr extends Ast {}
 enum Op {
@@ -25,6 +26,6 @@ record Str(String value) implements Atom {}
 record Bool(boolean value) implements Atom {}
 
 interface Statement extends Ast {}
-record Block(List<Statement> statements) implements Statement {}
 record IfSt(Expr condition, Block thenBlock, Block elseBlock) implements Statement {}
-
+record ReadSt(List<VarRef> var) implements Statement {}
+record WriteSt(List<Expr> expr) implements Statement {}
