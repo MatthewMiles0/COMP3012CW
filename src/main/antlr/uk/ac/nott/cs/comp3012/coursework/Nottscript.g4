@@ -5,13 +5,19 @@ file: (subroutine | function)* program EOF;
 program: KW_PROGRAM progName=NAME block KW_END KW_PROGRAM endProgName=NAME;
 subroutine: KW_SUBROUTINE subName=NAME L_BRACKET name_list R_BRACKET block KW_END KW_SUBROUTINE endSubName=NAME;
 function: KW_FUNCTION funcName=NAME L_BRACKET name_list R_BRACKET (KW_RESULT L_BRACKET resName=NAME R_BRACKET)? block KW_END KW_FUNCTION endFuncName=NAME;
-function_call: NAME L_BRACKET expression_list? R_BRACKET;
+//function_call: NAME L_BRACKET expression_list? R_BRACKET;
 
-statement: if_statement | if_then_statement | read | write | assignment | do_while_loop | do_loop | call;
-block: definitions* statement*;
+statement: if_statement
+         | if_then_statement
+         | write
+         | read
+         | assignment
+         | call;
+
+block: statement*;
 expression: literal #LiteralExpression
     | NAME #NameExpression
-    | function_call #FunctionCallExpression
+//    | function_call #FunctionCallExpression
     | L_BRACKET expression R_BRACKET #BinaryExpression
     | <assoc=right> lexp=expression DOUBLE_ASTERISK rexp=expression #BinaryExpression
     | lexp=expression (ASTERISK | SLASH) rexp=expression #BinaryExpression
@@ -23,7 +29,7 @@ expression: literal #LiteralExpression
     | lexp=expression DOUBLE_SLASH rexp=expression #BinaryExpression;
 
 definitions: type DOUBLE_COLON name_list;
-type: (KW_INTEGER | KW_LOGICAL | KW_CHARACTER | KW_REAL) (L_BRACKET ((NUMBER (COMMA NUMBER)*) | (ASTERISK (COMMA ASTERISK)*)) R_BRACKET)?;
+type: (KW_INTEGER | KW_LOGICAL | KW_CHARACTER | KW_REAL) (L_BRACKET ((L_INT (COMMA L_INT)*) | (ASTERISK (COMMA ASTERISK)*)) R_BRACKET)?;
 
 literal: L_INT #LiteralInt
     | L_REAL #LiteralReal
@@ -42,7 +48,7 @@ literal: L_INT #LiteralInt
 // util
 name_list: NAME (COMMA NAME)*;
 expression_list: expression (COMMA expression)*;
-var_ref: (dertype=NAME PERCENT)? varname=NAME(L_BRACKET NUMBER (COMMA NUMBER)* R_BRACKET)?;
+var_ref: (dertype=NAME PERCENT)? varname=NAME(L_BRACKET L_INT (COMMA L_INT)* R_BRACKET)?;
 
 // terminal statements
 read: KW_READ name_list;
@@ -95,7 +101,6 @@ fragment OCTAL: 'o"' [0-7]+ '"';
 fragment HEX: 'z"' [0-9a-f]+ '"';
 fragment ESCAPED_QUOTE: '""';
 
-NUMBER: DECIMAL+;
 L_INT: SIGN? DECIMAL+ | BINARY | OCTAL | HEX;
 L_REAL: SIGN? DECIMAL+ '.' DECIMAL* | SIGN? DECIMAL* '.' DECIMAL+;
 L_LOGICAL: '.true.' | '.false.';
