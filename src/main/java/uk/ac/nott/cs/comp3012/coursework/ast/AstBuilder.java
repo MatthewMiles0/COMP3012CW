@@ -13,6 +13,7 @@ import java.util.Objects;
 public class AstBuilder extends NottscriptBaseVisitor<Ast> {
     @Override
     public Program visitProgram(NottscriptParser.ProgramContext ctx) {
+        System.out.println("Visiting program: "+ctx.progName.getText());
         Block block = (Block) visit(ctx.block());
         String name = ctx.progName.getText();
         String endName = ctx.endProgName.getText();
@@ -24,21 +25,25 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Expr visitBinaryExpression(NottscriptParser.BinaryExpressionContext ctx) {
+        System.out.println("Visiting binary expression: "+ctx.children.get(1).getText());
         return new BinOp((Expr) visit(ctx.lexp), toOp(ctx.children.get(1).getText()), (Expr) visit(ctx.rexp));
     }
 
     @Override
     public Expr visitLiteralExpression(NottscriptParser.LiteralExpressionContext ctx) {
+        System.out.println("Visiting literal expression");
         return (Expr) visit(ctx.literal());
     }
 
     @Override
     public Expr visitNameExpression(NottscriptParser.NameExpressionContext ctx) {
-        return (Expr) new VarRef(ctx.NAME().getText());
+        System.out.println("Visiting name expression: "+ctx.NAME().getText());
+        return new VarRef(ctx.NAME().getText());
     }
 
     @Override
     public Expr visitLiteralInt(NottscriptParser.LiteralIntContext ctx) {
+        System.out.println("Visiting int literal");
         String text = ctx.L_INT().getText();
         return switch (text.charAt(0)) {
             case 'b' -> new Int(Integer.parseInt(text.substring(2), 2));
@@ -50,6 +55,7 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitLiteralLogical(NottscriptParser.LiteralLogicalContext ctx) {
+        System.out.println("Visiting logical literal");
         String text = ctx.L_LOGICAL().getText();
         return switch (text) {
             case ".true." -> new Bool(true);
@@ -60,6 +66,7 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitLiteralChar(NottscriptParser.LiteralCharContext ctx) {
+        System.out.println("Visiting char literal");
         String text = ctx.L_CHAR().getText();
         text = text.substring(1, text.length() - 1);
         text = text.replace("\"\"", "\"");
@@ -68,12 +75,14 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitLiteralReal(NottscriptParser.LiteralRealContext ctx) {
+        System.out.println("Visiting real literal");
         String text = ctx.L_REAL().getText();
         return new Real(Double.parseDouble(text));
     }
 
     @Override
     public Ast visitIf_statement(NottscriptParser.If_statementContext ctx) {
+        System.out.println("Visiting if statement");
         ArrayList<Statement> ifBlockStatements = new ArrayList<>();
         ifBlockStatements.add((Statement) visit(ctx.statement()));
         return new IfSt((Expr) visit(ctx.expression()), new Block(ifBlockStatements), new Block(new ArrayList<>()));
@@ -81,11 +90,14 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitIf_then_statement(NottscriptParser.If_then_statementContext ctx) {
+        System.out.println("Visiting if-then statement");
         return new IfSt((Expr) visit(ctx.expression()), (Block) visit(ctx.thenBlock), (Block) visit(ctx.elseBlock));
     }
 
     @Override
     public Ast visitBlock(NottscriptParser.BlockContext ctx) {
+        System.out.println("Visiting block");
+        if (ctx.children == null) return new Block(new ArrayList<>());
         List<Statement> statements = new ArrayList<>();
         for (var statement : ctx.children) {
             statements.add((Statement) visit(statement));
@@ -95,10 +107,12 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitWrite(NottscriptParser.WriteContext ctx) {
+        System.out.println("Visiting write statement");
         return new WriteSt(fetchExpressionList(ctx.expression_list()));
     }
 
     private List<Expr> fetchExpressionList(NottscriptParser.Expression_listContext ctx) {
+        System.out.println("Fetching expression list");
         ArrayList<Expr> expressions = new ArrayList<>();
         for (var expr : ctx.expression()) {
             expressions.add((Expr) visit(expr));
