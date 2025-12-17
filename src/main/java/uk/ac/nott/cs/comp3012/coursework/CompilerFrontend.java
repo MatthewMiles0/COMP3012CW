@@ -38,6 +38,6 @@ public class CompilerFrontend implements Compiler.Frontend {
         System.out.println("AST: " + ast);
 
         System.out.println(">>> Frontend done");
-        return null;
+        return ast;
     }
 }

@@ -2,15 +2,15 @@ package uk.ac.nott.cs.comp3012.coursework.tam;
 
 import uk.ac.nott.cs.comp3012.coursework.ast.Op;
 
-public class TamCallInstruction extends TamInstruction {
+public class TamQuickCallInstruction extends TamInstruction {
     private final TamPrimitive primitive;
 
-    public TamCallInstruction(TamPrimitive primitive) {
+    public TamQuickCallInstruction(TamPrimitive primitive) {
         this.op = TamOp.CALL;
         this.primitive = primitive;
     }
 
-    public TamCallInstruction(Op op) {
+    public TamQuickCallInstruction(Op op) {
         TamPrimitive primitive = TamPrimitive.valueOf(op.name());
         this.op = TamOp.CALL;
         this.primitive = primitive;
@@ -19,5 +19,10 @@ public class TamCallInstruction extends TamInstruction {
     @Override
     protected String getInstructionString() {
         return op.toString() + " " + primitive.name().toLowerCase();
+    }
+
+    @Override
+    public byte[] toByteArray() {
+        return new TamGenericInstruction(this.op, null, primitive.getDistanceFromPB(), TamRegister.PB).toByteArray();
     }
 }

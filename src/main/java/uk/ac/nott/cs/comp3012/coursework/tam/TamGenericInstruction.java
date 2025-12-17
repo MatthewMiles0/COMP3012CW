@@ -2,27 +2,26 @@ package uk.ac.nott.cs.comp3012.coursework.tam;
 
 import uk.ac.nott.cs.comp3012.coursework.exceptions.TamGenException;
 
-public class TamInstruction {
-    private final TamOp op;
+public class TamGenericInstruction extends TamInstruction {
     private final Integer n;
     private final Integer d;
     private final TamRegister r;
 
-    public TamInstruction(TamOp op, Integer n, Integer d, TamRegister r) {
+    public TamGenericInstruction(TamOp op, Integer n, Integer d, TamRegister r) {
         this.op = op;
         this.n = n;
         this.d = d;
         this.r = r;
 
-//        if (op.needsNArg() != (n == null)) {
+//        if (op.needsNArg() == (n == null)) {
 //            throw new TamGenException((op.needsNArg()?"Expected":"Did not expect")+" N arg but got "+n);
 //        }
 
-        if (op.needsDArg() != (d == null)) {
+        if (op.needsDArg() == (d == null)) {
             throw new TamGenException((op.needsDArg()?"Expected":"Did not expect")+" D arg but got "+d);
         }
 
-        if (op.needsRArg() != (r == null)) {
+        if (op.needsRArg() == (r == null)) {
             throw new TamGenException((op.needsRArg()?"Expected":"Did not expect")+" R arg but got "+r);
         }
     }
@@ -37,13 +36,13 @@ public class TamInstruction {
     }
 
     @Override
-    public String toString() {
-        if (op == null) return "; Could not generate instruction: null operator";
-        if (op == TamOp.UNUSED) return "; Unused instruction";
-        return op.name() + getNDR();
+    public String getInstructionString() {
+        return op.toString() + getNDR();
     }
 
-    public static TamInstruction getPlaceholder() {
-        return new TamInstruction(TamOp.UNUSED, null, null, null);
+    @Override
+    public byte[] toByteArray() {
+        return new byte[]{(byte) ((op.getOpCode() << 4) | r.getRegisterNumber()), n.byteValue(),
+                (byte) ((d & 0xff00) >>> 8), (byte) (d & 0xff),};
     }
 }

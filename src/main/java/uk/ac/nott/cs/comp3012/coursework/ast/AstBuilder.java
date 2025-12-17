@@ -3,19 +3,23 @@ package uk.ac.nott.cs.comp3012.coursework.ast;
 import org.antlr.v4.runtime.tree.ParseTree;
 import uk.ac.nott.cs.comp3012.coursework.NottscriptBaseVisitor;
 import uk.ac.nott.cs.comp3012.coursework.NottscriptParser;
+import uk.ac.nott.cs.comp3012.coursework.exceptions.SyntaxException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 public class AstBuilder extends NottscriptBaseVisitor<Ast> {
     @Override
     public Program visitProgram(NottscriptParser.ProgramContext ctx) {
-        List<Statement> statements = new ArrayList<>();
-        for (var statement : ctx.statement()) {
-            statements.add((Statement) visit(statement));
+        Block block = (Block) visit(ctx.block());
+        String name = ctx.progName.getText();
+        String endName = ctx.endProgName.getText();
+        if (!name.equals(endName)) {
+            throw new SyntaxException("Program name mismatch: " + name + " != " + endName);
         }
-        return new Program(statements);
+        return new Program(name, block);
     }
 
     @Override
