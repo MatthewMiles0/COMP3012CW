@@ -1,0 +1,5 @@
+a + b + c
+
+!program class4
+!	if (a + b ** c ** z ** y * w ** v ** m * d - e + (f .and. g) .or. f) write a
+!end program class4

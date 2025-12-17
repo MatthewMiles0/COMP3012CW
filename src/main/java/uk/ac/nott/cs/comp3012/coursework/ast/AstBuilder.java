@@ -82,7 +82,6 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitBlock(NottscriptParser.BlockContext ctx) {
-        System.out.println("v " + ctx.getChildCount());
         List<Statement> statements = new ArrayList<>();
         for (var statement : ctx.children) {
             statements.add((Statement) visit(statement));

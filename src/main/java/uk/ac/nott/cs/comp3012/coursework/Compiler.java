@@ -38,7 +38,7 @@ public class Compiler {
         String outputFile = args[1];
 
         Frontend frontend = new CompilerFrontend();
-        Backend backend = (program -> new byte[]{});
+        Backend backend = new CompilerBackend();
         Compiler compiler = new Compiler(frontend, backend);
         compiler.runCompiler(inputFile, outputFile);
     }
