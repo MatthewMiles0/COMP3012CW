@@ -6,7 +6,7 @@ package uk.ac.nott.cs.comp3012.coursework.util;
  *
  * @param <K1> key used for rows
  * @param <K2> key used for columns
- * @param <V>  type of values
+ * @param <V>  kind of values
  */
 public interface Table<K1, K2, V> {
 

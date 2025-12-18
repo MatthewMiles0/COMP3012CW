@@ -4,6 +4,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import uk.ac.nott.cs.comp3012.coursework.NottscriptBaseVisitor;
 import uk.ac.nott.cs.comp3012.coursework.NottscriptParser;
 import uk.ac.nott.cs.comp3012.coursework.exceptions.SyntaxException;
+import uk.ac.nott.cs.comp3012.coursework.semantic.Type;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,7 +14,7 @@ import java.util.Objects;
 public class AstBuilder extends NottscriptBaseVisitor<Ast> {
     @Override
     public Program visitProgram(NottscriptParser.ProgramContext ctx) {
-        System.out.println("Visiting program: "+ctx.progName.getText());
+        // System.out.println("Visiting program: "+ctx.progName.getText());
         Block block = (Block) visit(ctx.block());
         String name = ctx.progName.getText();
         String endName = ctx.endProgName.getText();
@@ -25,25 +26,25 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Expr visitBinaryExpression(NottscriptParser.BinaryExpressionContext ctx) {
-        System.out.println("Visiting binary expression: "+ctx.children.get(1).getText());
+        // System.out.println("Visiting binary expression: "+ctx.children.get(1).getText());
         return new BinOp((Expr) visit(ctx.lexp), toOp(ctx.children.get(1).getText()), (Expr) visit(ctx.rexp));
     }
 
     @Override
     public Expr visitLiteralExpression(NottscriptParser.LiteralExpressionContext ctx) {
-        System.out.println("Visiting literal expression");
+        // System.out.println("Visiting literal expression");
         return (Expr) visit(ctx.literal());
     }
 
     @Override
-    public Expr visitNameExpression(NottscriptParser.NameExpressionContext ctx) {
-        System.out.println("Visiting name expression: "+ctx.NAME().getText());
-        return new VarRef(ctx.NAME().getText());
+    public Expr visitVarRefExpression(NottscriptParser.VarRefExpressionContext ctx) {
+        // System.out.println("Visiting var ref expression"+ctx.var_ref().getText());
+        return (VarRef) visit(ctx.var_ref());
     }
 
     @Override
     public Expr visitLiteralInt(NottscriptParser.LiteralIntContext ctx) {
-        System.out.println("Visiting int literal");
+        // System.out.println("Visiting int literal");
         String text = ctx.L_INT().getText();
         return switch (text.charAt(0)) {
             case 'b' -> new Int(Integer.parseInt(text.substring(2), 2));
@@ -55,7 +56,7 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitLiteralLogical(NottscriptParser.LiteralLogicalContext ctx) {
-        System.out.println("Visiting logical literal");
+        // System.out.println("Visiting logical literal");
         String text = ctx.L_LOGICAL().getText();
         return switch (text) {
             case ".true." -> new Bool(true);
@@ -66,7 +67,7 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitLiteralChar(NottscriptParser.LiteralCharContext ctx) {
-        System.out.println("Visiting char literal");
+        // System.out.println("Visiting char literal");
         String text = ctx.L_CHAR().getText();
         text = text.substring(1, text.length() - 1);
         text = text.replace("\"\"", "\"");
@@ -75,44 +76,96 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitLiteralReal(NottscriptParser.LiteralRealContext ctx) {
-        System.out.println("Visiting real literal");
+        // System.out.println("Visiting real literal");
         String text = ctx.L_REAL().getText();
         return new Real(Double.parseDouble(text));
     }
 
     @Override
     public Ast visitIf_statement(NottscriptParser.If_statementContext ctx) {
-        System.out.println("Visiting if statement");
+        // System.out.println("Visiting if statement");
         ArrayList<Statement> ifBlockStatements = new ArrayList<>();
         ifBlockStatements.add((Statement) visit(ctx.statement()));
-        return new IfSt((Expr) visit(ctx.expression()), new Block(ifBlockStatements), new Block(new ArrayList<>()));
+        return new IfSt((Expr) visit(ctx.expression()), new Block(new ArrayList<>(), ifBlockStatements), new Block(new ArrayList<>(), new ArrayList<>()));
     }
 
     @Override
     public Ast visitIf_then_statement(NottscriptParser.If_then_statementContext ctx) {
-        System.out.println("Visiting if-then statement");
+        // System.out.println("Visiting if-then statement");
         return new IfSt((Expr) visit(ctx.expression()), (Block) visit(ctx.thenBlock), (Block) visit(ctx.elseBlock));
     }
 
     @Override
     public Ast visitBlock(NottscriptParser.BlockContext ctx) {
-        System.out.println("Visiting block");
-        if (ctx.children == null) return new Block(new ArrayList<>());
+        // System.out.println("Visiting block");
+        if (ctx.children == null) return new Block(new ArrayList<>(), new ArrayList<>());
+        List<InitVar> varInits = new ArrayList<>();
+        if (ctx.varInits() != null) {
+            for (var d : ctx.varInits()) {
+                Type type = toType(d.type().getText());
+                for(var vr : d.var_ref()) {
+                    varInits.add(new InitVar((VarRef) visit(vr), type));
+                }
+            }
+        }
         List<Statement> statements = new ArrayList<>();
-        for (var statement : ctx.children) {
+        for (var statement : ctx.statement()) {
+            // System.out.println("Visiting statement: "+statement.getText());
             statements.add((Statement) visit(statement));
         }
-        return new Block(statements);
+        return new Block(varInits, statements);
     }
 
     @Override
     public Ast visitWrite(NottscriptParser.WriteContext ctx) {
-        System.out.println("Visiting write statement");
+        // System.out.println("Visiting write statement");
         return new WriteSt(fetchExpressionList(ctx.expression_list()));
     }
 
+    @Override
+    public Ast visitAssignment(NottscriptParser.AssignmentContext ctx) {
+        // System.out.println("Visiting assignment statement");
+        return new Assignment((VarRef) visit(ctx.var_ref()), (Expr) visit(ctx.expression()));
+    }
+
+    @Override
+    public Ast visitVar_ref(NottscriptParser.Var_refContext ctx) {
+        // System.out.println("Visiting var ref: "+ctx.varname.getText());
+        List<Expr> indices = new ArrayList<>();
+        for(var e : ctx.expression()) {
+            indices.add((Expr) visit(e));
+        }
+        String dertype = null;
+        if (ctx.dertype != null) dertype = ctx.dertype.getText();
+        return new VarRef(ctx.varname.getText(), dertype, indices);
+    }
+
+    @Override
+    public Ast visitDo_while_loop(NottscriptParser.Do_while_loopContext ctx) {
+        return new DoWhile((Expr) visit(ctx.expression()), (Block) visit(ctx.block()));
+    }
+
+    @Override
+    public Ast visitDo_loop(NottscriptParser.Do_loopContext ctx) {
+        return new DoLoop(
+            (Assignment) visit(ctx.assignment()),
+            (Expr) visit(ctx.limit),
+            (Expr) visit(ctx.increment),
+            (Block) visit(ctx.block())
+        );
+    }
+
+    @Override
+    public Ast visitRead(NottscriptParser.ReadContext ctx) {
+        ArrayList<VarRef> vrs = new ArrayList<>();
+        for(var vr : ctx.var_ref()) {
+            vrs.add((VarRef) visit(vr));
+        }
+        return new ReadSt(vrs);
+    }
+
     private List<Expr> fetchExpressionList(NottscriptParser.Expression_listContext ctx) {
-        System.out.println("Fetching expression list");
+        // System.out.println("Fetching expression list");
         ArrayList<Expr> expressions = new ArrayList<>();
         for (var expr : ctx.expression()) {
             expressions.add((Expr) visit(expr));
@@ -136,6 +189,16 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
             case "/" -> Op.DIV;
             case "**" -> Op.POW;
             default -> throw new IllegalStateException("Unexpected operator value: " + op);
+        };
+    }
+
+    private Type toType(String type) {
+        return switch (type) {
+            case "integer" -> Type.INT;
+            case "real" -> Type.REAL;
+            case "logical" -> Type.BOOL;
+            case "character" -> Type.STR;
+            default -> throw new IllegalStateException("Unexpected kind value: " + type);
         };
     }
 }

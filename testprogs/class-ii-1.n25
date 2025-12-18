@@ -5,7 +5,7 @@ program class2_1
 
   prompt = "Enter five numbers"
   write prompt
-  do i = 0, 5 
+  do i = 0, 5
     read vector(i)
   end do
 
@@ -15,13 +15,14 @@ program class2_1
     sum = sum + vector(i)
   end do
 
-  if (sum .gt. 20) then 
+  if (sum .gt. 20) then
     write "The sum is very big"
-  else 
-    if (sum .gt. 10) then 
+  else
+    if (sum .gt. 10) then
       write "The sum is not so big"
-    else 
+    else
       write "The sum is small"
-    end if 
+    end if
   end if
 end program class2_1
+

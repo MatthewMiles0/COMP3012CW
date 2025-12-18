@@ -1,3 +1,5 @@
 package uk.ac.nott.cs.comp3012.coursework.symbol;
 
-public record Symbol (String name, SymbolType type) { }
+import uk.ac.nott.cs.comp3012.coursework.semantic.Type;
+
+public record Symbol (String name, SymbolKind kind, Type type) { }

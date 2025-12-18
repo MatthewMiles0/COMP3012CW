@@ -2,8 +2,15 @@ package uk.ac.nott.cs.comp3012.coursework.semantic;
 
 import uk.ac.nott.cs.comp3012.coursework.ast.*;
 import uk.ac.nott.cs.comp3012.coursework.exceptions.SemanticException;
+import uk.ac.nott.cs.comp3012.coursework.symbol.SymbolTable;
 
 public class TypeChecker extends AstVisitor<Type> {
+    private SymbolTable table;
+
+    public TypeChecker(SymbolTable table) {
+        this.table = table;
+    }
+
     public void check(Ast ast) {
         visit(ast);
     }
@@ -16,7 +23,12 @@ public class TypeChecker extends AstVisitor<Type> {
 
     @Override
     public Type visitBlock(Block b) {
+//        System.out.println("Visiting block: " + b);
+        for (var initVar : b.varInits()) {
+            visit(initVar);
+        }
         for (var statement : b.statements()) {
+//            System.out.println("Visiting statement: " + statement);
             visit(statement);
         }
         return null;
@@ -34,11 +46,19 @@ public class TypeChecker extends AstVisitor<Type> {
     public Type visitBinOp(BinOp bo) {
         Type leftType = visit(bo.left());
         Type rightType = visit(bo.right());
-        System.out.println("TC: " + leftType + " " + rightType);
+//        System.out.println("TC: " + leftType + " " + rightType);
         if (leftType != rightType) {
             throw new SemanticException("Incompatible types: " + leftType + " and " + rightType);
         }
         return leftType;
+    }
+
+    @Override
+    public Type visitDoLoop(DoLoop dl) {
+        visit(dl.init());
+        visit(dl.max());
+        visit(dl.block());
+        return null;
     }
 
     @Override
@@ -59,5 +79,10 @@ public class TypeChecker extends AstVisitor<Type> {
     @Override
     public Type visitReal(Real r) {
         return Type.REAL;
+    }
+
+    @Override
+    public Type visitVarRef(VarRef vr) {
+        return table.lookup(vr.name()).type();
     }
 }

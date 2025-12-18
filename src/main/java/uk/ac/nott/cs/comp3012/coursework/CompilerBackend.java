@@ -11,21 +11,22 @@ public class CompilerBackend implements Compiler.Backend {
     public byte[] runBackend(Ast program) {
         System.out.println(">>> Running backend");
 
-        System.out.println("> Checking types");
-        new TypeChecker().visit(program);
-
         System.out.println("> Creating Symbol Table");
         SymbolTable symbolTable = new SymbolTableBuilder().build(program);
         System.out.println(symbolTable);
 
+        System.out.println("> Checking types");
+        new TypeChecker(symbolTable).check(program);
+
         System.out.println("> Generating TAM Instructions");
-        TamInstructionBuilder builder = new TamInstructionBuilder();
+        TamInstructionBuilder builder = new TamInstructionBuilder(symbolTable);
         var instructions = builder.build(program);
 
         StringBuilder sb = new StringBuilder();
         for (var instruction : instructions) {
             sb.append(instruction).append("\n");
         }
+        System.out.println("TAM Output:");
         System.out.println(sb);
 
         System.out.println(">>> Backend done");
