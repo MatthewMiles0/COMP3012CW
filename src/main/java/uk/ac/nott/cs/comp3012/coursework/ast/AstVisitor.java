@@ -2,7 +2,7 @@ package uk.ac.nott.cs.comp3012.coursework.ast;
 
 public class AstVisitor<T> {
     public T visit(Ast ast) {
-        System.out.println("                             > " + ast);
+//        System.out.println("                             > " + ast);
         T ret = switch (ast) {
             case Program p -> visitProgram(p);
             case Block b -> visitBlock(b);
@@ -23,7 +23,7 @@ public class AstVisitor<T> {
             case Assignment a -> visitAssignment(a);
             default -> throw new IllegalStateException("Unexpected value: " + ast);
         };
-        System.out.println( "                            <  " + ast);
+//        System.out.println( "                            <  " + ast);
         return ret;
     }
 

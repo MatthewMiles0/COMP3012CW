@@ -26,7 +26,7 @@ public class TamInstructionBuilder extends AstVisitor<Void> {
     }
 
     private void addInstruction(TamInstruction instruction) {
-        System.out.println(stackSize + " : " + instruction);
+//        System.out.println(stackSize + " : " + instruction);
         instructions.add(instruction);
     }
 

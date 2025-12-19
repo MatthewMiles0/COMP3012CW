@@ -10,7 +10,7 @@ public enum TamOp {
     CALL,
     CALLI,
     RETURN,
-    UNUSED, // do not use. placed for ordinal op code
+    UNUSED, // for ordinal op code. also used as a placeholder instruction
     PUSH,
     POP,
     JUMP,
@@ -22,7 +22,7 @@ public enum TamOp {
         return ordinal();
     }
 
-    public boolean needsNArg() {
+    public boolean allowsNArg() {
         return switch (this) {
             case LOAD, LOADI, STORE, STOREI, CALL, RETURN, POP, JUMPIF -> true;
             default -> false;

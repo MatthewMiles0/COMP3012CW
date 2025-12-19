@@ -13,9 +13,9 @@ public class TamGenericInstruction extends TamInstruction {
         this.d = d;
         this.r = r;
 
-//        if (op.needsNArg() == (n == null)) {
-//            throw new TamGenException((op.needsNArg()?"Expected":"Did not expect")+" N arg but got "+n);
-//        }
+        if (!op.allowsNArg() && n != null) {
+            throw new TamGenException("Did not expect N arg but got "+n);
+        }
 
         if (op.needsDArg() == (d == null)) {
             throw new TamGenException((op.needsDArg()?"Expected":"Did not expect")+" D arg but got "+d);
@@ -42,7 +42,11 @@ public class TamGenericInstruction extends TamInstruction {
 
     @Override
     public byte[] toByteArray() {
-        return new byte[]{(byte) ((op.getOpCode() << 4) | r.getRegisterNumber()), n.byteValue(),
-                (byte) ((d & 0xff00) >>> 8), (byte) (d & 0xff),};
+        int rI = 0, nI = 0, dI = 0;
+        if (r != null) rI = r.getRegisterNumber();
+        if (n != null) nI = n;
+        if (d != null) dI = d;
+        return new byte[]{(byte) ((op.getOpCode() << 4) | rI), (byte) nI,
+                (byte) ((dI & 0xff00) >>> 8), (byte) (dI & 0xff),};
     }
 }

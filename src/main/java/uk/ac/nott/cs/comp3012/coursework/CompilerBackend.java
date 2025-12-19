@@ -6,6 +6,9 @@ import uk.ac.nott.cs.comp3012.coursework.symbol.SymbolTable;
 import uk.ac.nott.cs.comp3012.coursework.symbol.SymbolTableBuilder;
 import uk.ac.nott.cs.comp3012.coursework.tam.TamInstructionBuilder;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CompilerBackend implements Compiler.Backend {
     @Override
     public byte[] runBackend(Ast program) {
@@ -29,7 +32,23 @@ public class CompilerBackend implements Compiler.Backend {
         System.out.println("TAM Output:");
         System.out.println(sb);
 
+        System.out.println("> Converting TAM Instructions to byte array");
+        List<byte[]> instBytes = new ArrayList<>();
+        for (var instruction : instructions) {
+            instBytes.add(instruction.toByteArray());
+        }
+        int size = 0;
+        for (var b : instBytes) {
+            size += b.length;
+        }
+        byte[] output = new byte[size];
+        int pos = 0;
+        for (var b : instBytes) {
+            System.arraycopy(b, 0, output, pos, b.length);
+            pos += b.length;
+        }
+
         System.out.println(">>> Backend done");
-        return sb.toString().getBytes();
+        return output;
     }
 }
