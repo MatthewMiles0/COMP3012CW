@@ -47,7 +47,7 @@ public class TypeChecker extends AstVisitor<Type> {
         Type leftType = visit(bo.left());
         Type rightType = visit(bo.right());
 //        System.out.println("TC: " + leftType + " " + rightType);
-        if (leftType != rightType) {
+        if (!leftType.equals(rightType)) {
             throw new SemanticException("Incompatible types: " + leftType + " and " + rightType);
         }
         return leftType;
@@ -63,22 +63,22 @@ public class TypeChecker extends AstVisitor<Type> {
 
     @Override
     public Type visitInt(Int i) {
-        return Type.INT;
+        return new Type(BaseType.INT, null, 0);
     }
 
     @Override
     public Type visitBool(Bool b) {
-        return Type.BOOL;
+        return new Type(BaseType.BOOL, null, 0);
     }
 
     @Override
     public Type visitString(Str s) {
-        return Type.STR;
+        return new Type(BaseType.STR, null, 0);
     }
 
     @Override
     public Type visitReal(Real r) {
-        return Type.REAL;
+        return new Type(BaseType.REAL, null, 0);
     }
 
     @Override

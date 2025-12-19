@@ -1,6 +1,5 @@
 package uk.ac.nott.cs.comp3012.coursework.tam;
 
-import jdk.jshell.spi.ExecutionControl;
 import uk.ac.nott.cs.comp3012.coursework.ast.*;
 import uk.ac.nott.cs.comp3012.coursework.exceptions.TamGenException;
 import uk.ac.nott.cs.comp3012.coursework.semantic.Type;
@@ -52,15 +51,32 @@ public class TamInstructionBuilder extends AstVisitor<Void> {
         int startStackSize = stackSize;
         List<String> vars = new ArrayList<>();
         for (var iv : b.varInits()) {
-            switch (iv.type()) {
-                case INT:
-                case BOOL:
-                    varMap.put(iv.vr().name(), stackSize);
-                    vars.add(iv.vr().name());
-                    stackSize += 1;
-                    break;
-                default:
-                    throw new TamGenException("Cannot initialise type " + iv.type());
+            if (iv.type().arrayDimensions() == null && iv.type().pointerLevel() == 0) {
+                switch (iv.type().baseType()) {
+                    case INT:
+                    case BOOL:
+                        varMap.put(iv.vr().name(), stackSize);
+                        vars.add(iv.vr().name());
+                        stackSize += 1;
+                        break;
+                    default:
+                        throw new TamGenException("Cannot initialise type " + iv.type());
+                }
+            } else if (iv.type().arrayDimensions() != null) {
+                switch (iv.type().baseType()) {
+                    case INT:
+                    case BOOL:
+                        varMap.put(iv.vr().name(), stackSize);
+                        vars.add(iv.vr().name());
+                        int size = iv.type().arrayDimensions().getFirst();
+                        for (int i = 1; i < iv.type().arrayDimensions().size(); i++) {
+                            size *= iv.type().arrayDimensions().get(i);
+                        }
+                        stackSize += size;
+                        break;
+                }
+            } else {
+                throw new TamGenException("Cannot initialise pointer type " + iv.type());
             }
         }
         int blockStackSize = stackSize - startStackSize;
@@ -158,17 +174,12 @@ public class TamInstructionBuilder extends AstVisitor<Void> {
     @Override
     public Void visitReadSt(ReadSt rs) {
         Type type;
-        int stackIndex;
         for (var vr : rs.var()) {
+            visitVarAddress(vr);
             type = table.lookup(vr.name()).type();
-            stackIndex = varMap.getOrDefault(vr.name(), -1);
-            if (stackIndex == -1) {
-                throw new TamGenException("Variable " + vr.name() + " not found on stack");
-            }
-            switch (type) {
+            switch (type.baseType()) {
                 case INT:
                 case BOOL:
-                    addInstruction(new TamGenericInstruction(TamOp.LOADA, null, stackIndex, TamRegister.SB));
                     addInstruction(new TamQuickCallInstruction(TamPrimitive.GETINT));
                     break;
                 default:
@@ -194,41 +205,129 @@ public class TamInstructionBuilder extends AstVisitor<Void> {
     @Override
     public Void visitDoLoop(DoLoop dl) {
         visit(dl.init());
+        int loopStart = instructions.size();
+        visit(dl.init().varRef());
         visit(dl.max());
-        visit(dl.step());
+        addInstruction(new TamQuickCallInstruction(TamPrimitive.LT));
+        stackSize -= 1;
+        int loopJumpIfIndex = instructions.size();
+        addInstruction(TamInstruction.getPlaceholder());
         visit(dl.block());
+        visit(dl.init().varRef());
+        visit(dl.step());
+        addInstruction(new TamQuickCallInstruction(TamPrimitive.ADD));
+        stackSize -= 1;
+        saveStackTopAtVar(dl.init().varRef());
+        addInstruction(new TamGenericInstruction(TamOp.JUMP, null, loopStart, TamRegister.CB));
+        int endIndex = instructions.size();
+        instructions.set(loopJumpIfIndex, new TamGenericInstruction(TamOp.JUMPIF, 0, endIndex, TamRegister.CB));
         return null;
     }
 
+
     @Override
     public Void visitVarRef(VarRef vr) {
+        Type type = table.lookup(vr.name()).type();
+        visitVarAddress(vr);
+        switch (type.baseType()) {
+            case INT:
+            case BOOL:
+                addInstruction(new TamGenericInstruction(TamOp.LOADI, 1, null, null));
+                break;
+            default:
+                throw new TamGenException("Cannot load array type " + type);
+        }
+        return null;
+    }
+
+    private void visitVarAddress(VarRef vr) {
         int stackIndex = varMap.getOrDefault(vr.name(), -1);
         Type type = table.lookup(vr.name()).type();
         if (stackIndex == -1) {
             throw new TamGenException("Variable " + vr.name() + " not found on stack");
         }
-        switch (type) {
-            case INT:
-            case BOOL:
-                addInstruction(new TamGenericInstruction(TamOp.LOAD, 1, stackIndex, TamRegister.SB));
-                stackSize += 1;
-                varMap.put(vr.name(), stackIndex);
-                break;
-            default:
-                throw new TamGenException("Cannot load type " + type);
+        if (type.arrayDimensions() == null && type.pointerLevel() == 0) {
+            switch (type.baseType()) {
+                case INT:
+                case BOOL:
+                    addInstruction(new TamGenericInstruction(TamOp.LOADA, null, stackIndex, TamRegister.SB));
+                    stackSize += 1;
+                    break;
+                default:
+                    throw new TamGenException("Cannot load address of singular type " + type);
+            }
+        } else if (type.arrayDimensions() != null) {
+            switch (type.baseType()) {
+                case INT:
+                case BOOL:
+                    calculateIndex(vr, type);
+                    addInstruction(new TamGenericInstruction(TamOp.LOADA, null, stackIndex, TamRegister.SB));
+                    stackSize += 1;
+                    addInstruction(new TamQuickCallInstruction(TamPrimitive.ADD));
+                    stackSize -= 1;
+                    break;
+                default:
+                    throw new TamGenException("Cannot load address of array type " + type);
+            }
+        } else {
+            throw new TamGenException("Cannot load address of pointer type " + type);
         }
-        return null;
+    }
+
+    private void calculateIndex(VarRef vr, Type type) {
+        for (int i = 0; i < type.arrayDimensions().size(); i++) {
+            visit(vr.indices().get(i));
+            if (i > 0) {
+                addInstruction(new TamGenericInstruction(TamOp.LOADL, null, type.arrayDimensions().get(i), null));
+                stackSize += 1;
+                addInstruction(new TamQuickCallInstruction(TamPrimitive.MULT));
+                stackSize -= 1;
+                addInstruction(new TamQuickCallInstruction(TamPrimitive.ADD));
+                stackSize -= 1;
+            }
+        }
     }
 
     @Override
     public Void visitAssignment(Assignment a) {
         visit(a.expr());
-        Type type = table.lookup(a.varRef().name()).type();
-        int stackIndex = varMap.getOrDefault(a.varRef().name(), -1);
-
-        addInstruction(new TamGenericInstruction(TamOp.STORE, 1, stackIndex, TamRegister.SB));
-        stackSize -= 1;
-
+        saveStackTopAtVar(a.varRef());
         return null;
+    }
+
+    private void saveStackTopAtVar(VarRef vr) {
+        Type type = table.lookup(vr.name()).type();
+        int stackIndex = varMap.getOrDefault(vr.name(), -1);
+
+        if (type.arrayDimensions() == null && type.pointerLevel() == 0) {
+            switch (type.baseType()) {
+                case INT:
+                case BOOL:
+                    addInstruction(new TamGenericInstruction(TamOp.STORE, 1, stackIndex, TamRegister.SB));
+                    stackSize -= 1;
+                    break;
+                default:
+                    throw new TamGenException("Cannot save singular type " + type);
+            }
+        } else if (type.arrayDimensions() != null) {
+            switch (type.baseType()) {
+                case INT:
+                case BOOL:
+                    calculateIndex(vr, type);
+                    addInstruction(new TamGenericInstruction(TamOp.LOADA, null, stackIndex, TamRegister.SB));
+                    stackSize += 1;
+                    addInstruction(new TamQuickCallInstruction(TamPrimitive.ADD));
+                    stackSize -= 1;
+
+                    addInstruction(new TamGenericInstruction(TamOp.STOREI, 1, null, null));
+                    stackSize -= 1;
+                    break;
+            }
+        } else {
+            throw new TamGenException("Cannot save pointer type " + type);
+        }
+
+
+        stackSize -= 1;
     }
 }

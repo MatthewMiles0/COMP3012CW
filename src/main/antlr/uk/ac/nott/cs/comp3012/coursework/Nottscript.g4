@@ -31,7 +31,7 @@ expression: literal #LiteralExpression
     | lexp=expression DOUBLE_SLASH rexp=expression #BinaryExpression;
 
 varInits: type DOUBLE_COLON var_ref (COMMA var_ref)*;
-type: (KW_INTEGER | KW_LOGICAL | KW_CHARACTER | KW_REAL) (L_BRACKET ((L_INT (COMMA L_INT)*) | (ASTERISK (COMMA ASTERISK)*)) R_BRACKET)?;
+type: basetype=(KW_INTEGER | KW_LOGICAL | KW_CHARACTER | KW_REAL) (L_BRACKET ((L_INT (COMMA L_INT)*) | (ASTERISK (COMMA ASTERISK)*)) R_BRACKET)?;
 
 literal: L_INT #LiteralInt
     | L_REAL #LiteralReal

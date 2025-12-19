@@ -4,12 +4,14 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import uk.ac.nott.cs.comp3012.coursework.NottscriptBaseVisitor;
 import uk.ac.nott.cs.comp3012.coursework.NottscriptParser;
 import uk.ac.nott.cs.comp3012.coursework.exceptions.SyntaxException;
+import uk.ac.nott.cs.comp3012.coursework.semantic.BaseType;
 import uk.ac.nott.cs.comp3012.coursework.semantic.Type;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 public class AstBuilder extends NottscriptBaseVisitor<Ast> {
     @Override
@@ -46,6 +48,10 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
     public Expr visitLiteralInt(NottscriptParser.LiteralIntContext ctx) {
         // System.out.println("Visiting int literal");
         String text = ctx.L_INT().getText();
+        return toInt(text);
+    }
+
+    private static Int toInt(String text) {
         return switch (text.charAt(0)) {
             case 'b' -> new Int(Integer.parseInt(text.substring(2), 2));
             case 'o' -> new Int(Integer.parseInt(text.substring(2), 8));
@@ -102,7 +108,7 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
         List<InitVar> varInits = new ArrayList<>();
         if (ctx.varInits() != null) {
             for (var d : ctx.varInits()) {
-                Type type = toType(d.type().getText());
+                Type type = toType(d.type());
                 for(var vr : d.var_ref()) {
                     varInits.add(new InitVar((VarRef) visit(vr), type));
                 }
@@ -147,10 +153,18 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
 
     @Override
     public Ast visitDo_loop(NottscriptParser.Do_loopContext ctx) {
+        Expr increment;
+
+        if (ctx.increment == null) {
+            increment = new Int(1);
+        } else {
+            increment = (Expr) visit(ctx.increment);
+        }
+
         return new DoLoop(
             (Assignment) visit(ctx.assignment()),
             (Expr) visit(ctx.limit),
-            (Expr) visit(ctx.increment),
+            increment,
             (Block) visit(ctx.block())
         );
     }
@@ -192,13 +206,30 @@ public class AstBuilder extends NottscriptBaseVisitor<Ast> {
         };
     }
 
-    private Type toType(String type) {
-        return switch (type) {
-            case "integer" -> Type.INT;
-            case "real" -> Type.REAL;
-            case "logical" -> Type.BOOL;
-            case "character" -> Type.STR;
+    private Type toType(NottscriptParser.TypeContext type) {
+        BaseType bt = switch (type.basetype.getText()) {
+            case "integer" -> BaseType.INT;
+            case "real" -> BaseType.REAL;
+            case "logical" -> BaseType.BOOL;
+            case "character" -> BaseType.STR;
             default -> throw new IllegalStateException("Unexpected kind value: " + type);
         };
+
+        int pointerLevel = 0;
+        ArrayList<Integer> dimensions = null;
+
+        var ints = type.L_INT();
+        if (ints != null) {
+            if (!ints.isEmpty()) {
+                dimensions = new ArrayList<>();
+            }
+            for (var l : ints) {
+                dimensions.add(toInt(l.getText()).value());
+            }
+        } else if (type.ASTERISK() != null) {
+            pointerLevel = type.ASTERISK().size();
+        }
+
+        return new Type(bt, dimensions, pointerLevel);
     }
 }

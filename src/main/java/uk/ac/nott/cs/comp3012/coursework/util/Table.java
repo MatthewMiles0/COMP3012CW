@@ -13,7 +13,7 @@ public interface Table<K1, K2, V> {
     /**
      * Return the number of filled cells in this table.
      *
-     * @return the size
+     * @return the arrayDimensions
      */
     int size();
 
